@@ -52,18 +52,23 @@ module "database" {
   skip_final_snapshot             = var.skip_final_snapshot
 }
 
+# Security
+module "security" {
+  source        = "./modules/security"
+  project_name  = var.project_name
+  db_engine     = module.database.db_engine
+  db_host       = module.database.db_host
+  db_name       = module.database.db_name
+  db_identifier = module.database.db_identifier
+  db_port       = module.database.db_port
+  db_username   = module.database.db_username
+  db_password   = random_password.db_password.result
+}
+
+
 # module "web_server" {
 #   source          = "./modules/web_server"
 #   main_region     = var.aws_region
 #   nwt_prefix_name = var.project_name
 #   main_vpc_id     = module.networking.main_vpc_id
-# }
-
-# module "transit_gateway" {
-#   source = "./modules/transit_gateway"
-#   vpc_id = module.networking.vpc_id
-#   private_subnets_id = [
-#     module.networking.private_subnet_1_id,
-#     module.networking.private_subnet_2_id,
-#   ]
 # }

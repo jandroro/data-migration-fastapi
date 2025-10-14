@@ -1,1 +1,3 @@
-fastapi[standard]
+ruff
+pytest
+httpx

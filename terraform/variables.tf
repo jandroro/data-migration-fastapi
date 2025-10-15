@@ -127,6 +127,12 @@ variable "maintenance_window" {
   description = "Preferred maintenance window"
 }
 
+variable "log_retention_days" {
+  type        = number
+  default     = 30
+  description = "CloudWatch log retention in days"
+}
+
 # #####################################
 # MONITORING CONFIG
 # #####################################
@@ -151,4 +157,26 @@ variable "skip_final_snapshot" {
   type        = bool
   default     = false
   description = "Skip final snapshot on deletion (not recommended for production)"
+}
+
+# #####################################
+# BASTION CONFIG
+# #####################################
+
+variable "bastion_instance_type" {
+  type        = string
+  default     = "t3.micro"
+  description = "Instance type for bastion host"
+}
+
+variable "bastion_key_name" {
+  type        = string
+  default     = null
+  description = "SSH key name for bastion host (optional - use SSM Session Manager instead)"
+}
+
+variable "enable_ssm_on_bastion" {
+  type        = bool
+  default     = false # Set to true if you want SSM access
+  description = "Enable SSM Session Manager on bastion (requires VPC endpoints or internet access)"
 }

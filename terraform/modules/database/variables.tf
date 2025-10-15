@@ -92,3 +92,8 @@ variable "skip_final_snapshot" {
   type        = bool
   description = "Skip final snapshot on deletion (not recommended for production)"
 }
+
+variable "log_retention_days" {
+  type        = number
+  description = "CloudWatch log retention in days"
+}

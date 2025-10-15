@@ -50,6 +50,7 @@ module "database" {
   enabled_cloudwatch_logs_exports = var.enabled_cloudwatch_logs_exports
   deletion_protection             = var.deletion_protection
   skip_final_snapshot             = var.skip_final_snapshot
+  log_retention_days              = var.log_retention_days
 }
 
 # Security
@@ -66,9 +67,13 @@ module "security" {
 }
 
 
-# module "web_server" {
-#   source          = "./modules/web_server"
-#   main_region     = var.aws_region
-#   nwt_prefix_name = var.project_name
-#   main_vpc_id     = module.networking.main_vpc_id
-# }
+module "bastion" {
+  source                        = "./modules/bastion"
+  project_name                  = var.project_name
+  db_credentials_secret_arn     = module.security.db_credentials_secret_arn
+  bastion_instance_type         = var.bastion_instance_type
+  subnet_public_id              = module.networking.subnet_public_id
+  vpc_security_group_bastion_id = module.networking.vpc_security_group_bastion_id
+  bastion_key_name              = var.bastion_key_name
+  enable_ssm_on_bastion         = var.enable_ssm_on_bastion
+}

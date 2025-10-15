@@ -139,3 +139,16 @@ resource "aws_db_instance" "main" {
     ignore_changes = [final_snapshot_identifier]
   }
 }
+
+# #####################################
+# CLOUDWATCH LOG GROUP
+# #####################################
+
+resource "aws_cloudwatch_log_group" "rds" {
+  name              = "/aws/rds/instance/${var.project_name}-db"
+  retention_in_days = var.log_retention_days
+
+  tags = {
+    Name = "${var.project_name}-rds-logs"
+  }
+}

@@ -1,4 +1,18 @@
 # #####################################
+# DATA
+# #####################################
+
+# Data source to fetch your current public IP
+data "http" "my_ip" {
+  url = "https://checkip.amazonaws.com"
+}
+
+# Local variable to format the IP as CIDR
+locals {
+  my_ip_cidr = "${chomp(data.http.my_ip.response_body)}/32"
+}
+
+# #####################################
 # MAIN VPC
 # #####################################
 
@@ -182,6 +196,48 @@ resource "aws_security_group" "app" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# Security Group for Bastion Host
+resource "aws_security_group" "bastion" {
+  name_prefix = "${var.project_name}-bastion-sg-"
+  description = "Security group for bastion host"
+  vpc_id      = aws_vpc.main_vpc.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [local.my_ip_cidr]
+    description = "SSH access from allowed IP"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = {
+    Name = "${var.project_name}-bastion-sg"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Update RDS security group to allow bastion access
+resource "aws_security_group_rule" "rds_from_bastion" {
+  type                     = "ingress"
+  from_port                = var.db_port
+  to_port                  = var.db_port
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.bastion.id
+  security_group_id        = aws_security_group.rds.id
+  description              = "Allow database access from bastion"
 }
 
 # #####################################

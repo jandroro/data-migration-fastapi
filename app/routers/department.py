@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, Response
+import csv
+import io
+import pandas as pd
+from fastapi import APIRouter, HTTPException, Depends, Query, Response, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from typing import List
@@ -9,6 +12,8 @@ from app.models.pydantic_models import (
     DepartmentCreate,
     DepartmentUpdate,
     DepartmentWithEmployees,
+    UploadResponse,
+    BatchResponse,
 )
 
 router = APIRouter(
@@ -134,3 +139,82 @@ async def delete_department(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Database error occurred")
+
+
+@router.post("/upload", response_model=UploadResponse)
+async def upload_departments_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(
+        get_db,
+    ),
+):
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+
+    try:
+        contents = await file.read()
+        df = pd.read_csv(io.StringIO(contents.decode("utf-8")), header=None)
+        df.columns = ["id", "department"]
+
+        # Validate data
+        if df.isnull().any().any():
+            raise HTTPException(status_code=400, detail="CSV contains null values")
+
+        records_inserted = 0
+        records_updated = 0
+
+        for _, row in df.iterrows():
+            existing = (
+                db.query(DBDepartment).filter(DBDepartment.id == int(row["id"])).first()
+            )
+
+            if existing:
+                existing.department = row["department"]
+                records_updated += 1
+            else:
+                dept = DBDepartment(id=int(row["id"]), department=row["department"])
+                db.add(dept)
+                records_inserted += 1
+
+        db.commit()
+
+        return UploadResponse(
+            message="Departments uploaded successfully",
+            records_inserted=records_inserted,
+            records_updated=records_updated,
+        )
+    except pd.errors.EmptyDataError:
+        raise HTTPException(status_code=400, detail="CSV file is empty")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+
+@router.post("/upload/batch", response_model=BatchResponse)
+def batch_insert_departments(
+    departments: List[Department], db: Session = Depends(get_db)
+):
+    if len(departments) < 1 or len(departments) > 1000:
+        raise HTTPException(
+            status_code=400, detail="Batch size must be between 1 and 1000 records"
+        )
+
+    try:
+        records_inserted = 0
+        bulk_dept = []
+
+        for dept_data in departments:
+            dept = DBDepartment(**dept_data.model_dump())
+            bulk_dept.append(dept)
+            records_inserted += 1
+
+        db.bulk_save_objects(bulk_dept)
+        db.commit()
+
+        return BatchResponse(
+            message="Batch insert successful", records_processed=records_inserted
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

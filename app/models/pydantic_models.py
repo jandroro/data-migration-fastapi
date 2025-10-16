@@ -70,3 +70,15 @@ class DepartmentWithEmployees(Department):
     employees: list[EmployeeBasic] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UploadResponse(BaseModel):
+    message: str
+    records_inserted: int
+    records_updated: int = 0
+    errors: Optional[list[str]] = None
+
+
+class BatchResponse(BaseModel):
+    message: str
+    records_processed: int

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -34,7 +34,7 @@ class Employee(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=True)
-    datetime = Column(String, nullable=True)  # Storing as string to match CSV format
+    datetime = Column(DateTime, nullable=True)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True)
 

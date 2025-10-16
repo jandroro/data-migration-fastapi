@@ -5,67 +5,61 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from typing import List
 from app.database import get_db
-from app.models.database_models import Department as DBDepartment
+from app.models.database_models import Job as DBJob
 from app.models.pydantic_models import (
-    Department,
-    DepartmentCreate,
-    DepartmentUpdate,
-    DepartmentWithEmployees,
+    Job,
+    JobCreate,
+    JobUpdate,
+    JobWithEmployees,
     UploadResponse,
     BatchResponse,
 )
 
 router = APIRouter(
-    prefix="/api/v1/departments",
-    tags=["departments"],
+    prefix="/api/v1/jobs",
+    tags=["jobs"],
 )
 
 
-@router.get("/", response_model=List[Department])
-async def get_all_departments(
+@router.get("/", response_model=List[Job])
+async def get_all_jobs(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(
         100, ge=1, le=1000, description="Maximum number of records to return"
     ),
     db: Session = Depends(get_db),
 ):
-    departments = db.query(DBDepartment).offset(skip).limit(limit).all()
-    return departments
+    jobs = db.query(DBJob).offset(skip).limit(limit).all()
+    return jobs
 
 
-@router.get("/{department_id}", response_model=DepartmentWithEmployees)
-async def get_department(department_id: int, db: Session = Depends(get_db)):
-    department = db.query(DBDepartment).filter(DBDepartment.id == department_id).first()
+@router.get("/{job_id}", response_model=JobWithEmployees)
+async def get_job(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(DBJob).filter(DBJob.id == job_id).first()
 
-    if not department:
-        raise HTTPException(status_code=404, detail="Department not found")
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
 
-    return department
+    return job
 
 
-@router.post("/", response_model=Department, status_code=201)
-async def create_department(
-    department: DepartmentCreate,
+@router.post("/", response_model=Job, status_code=201)
+async def create_job(
+    job: JobCreate,
     db: Session = Depends(get_db),
 ):
     try:
-        # Check if department name already exists
-        existing = (
-            db.query(DBDepartment)
-            .filter(DBDepartment.department == department.department)
-            .first()
-        )
+        # Check if job name already exists
+        existing = db.query(DBJob).filter(DBJob.job == job.job).first()
 
         if existing:
-            raise HTTPException(
-                status_code=400, detail="Department name already exists"
-            )
+            raise HTTPException(status_code=400, detail="Job name already exists")
 
-        db_department = DBDepartment(**department.model_dump())
-        db.add(db_department)
+        db_job = DBJob(**job.model_dump())
+        db.add(db_job)
         db.commit()
-        db.refresh(db_department)
-        return db_department
+        db.refresh(db_job)
+        return db_job
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Database constraint violation")
@@ -74,40 +68,32 @@ async def create_department(
         raise HTTPException(status_code=500, detail="Database error occurred")
 
 
-@router.put("/{department_id}", response_model=Department)
-async def update_department(
-    department_id: int,
-    department: DepartmentUpdate,
+@router.put("/{job_id}", response_model=Job)
+async def update_job(
+    job_id: int,
+    job: JobUpdate,
     db: Session = Depends(get_db),
 ):
     try:
-        db_department = (
-            db.query(DBDepartment).filter(DBDepartment.id == department_id).first()
-        )
+        db_job = db.query(DBJob).filter(DBJob.id == job_id).first()
 
-        if not db_department:
-            raise HTTPException(status_code=404, detail="Department not found")
+        if not db_job:
+            raise HTTPException(status_code=404, detail="Job not found")
 
         # Check name uniqueness if name is being updated
-        if department.department and department.department != db_department.department:
-            existing = (
-                db.query(DBDepartment)
-                .filter(DBDepartment.department == department.department)
-                .first()
-            )
+        if job.job and job.job != db_job.job:
+            existing = db.query(DBJob).filter(DBJob.job == job.job).first()
             if existing:
-                raise HTTPException(
-                    status_code=400, detail="Department name already exists"
-                )
+                raise HTTPException(status_code=400, detail="Job name already exists")
 
         # Update only provided fields
-        update_data = department.model_dump(exclude_unset=True)
+        update_data = job.model_dump(exclude_unset=True)
         for field, value in update_data.items():
-            setattr(db_department, field, value)
+            setattr(db_job, field, value)
 
         db.commit()
-        db.refresh(db_department)
-        return db_department
+        db.refresh(db_job)
+        return db_job
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Database constraint violation")
@@ -116,20 +102,18 @@ async def update_department(
         raise HTTPException(status_code=500, detail="Database error occurred")
 
 
-@router.delete("/{department_id}", status_code=204)
-async def delete_department(
-    department_id: int,
+@router.delete("/{job_id}", status_code=204)
+async def delete_job(
+    job_id: int,
     db: Session = Depends(get_db),
 ):
     try:
-        db_department = (
-            db.query(DBDepartment).filter(DBDepartment.id == department_id).first()
-        )
+        db_job = db.query(DBJob).filter(DBJob.id == job_id).first()
 
-        if not db_department:
-            raise HTTPException(status_code=404, detail="Department not found")
+        if not db_job:
+            raise HTTPException(status_code=404, detail="Job not found")
 
-        db.delete(db_department)
+        db.delete(db_job)
         db.commit()
         return Response(status_code=204)
     except IntegrityError:
@@ -141,7 +125,7 @@ async def delete_department(
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_departments_csv(
+async def upload_jobs_csv(
     file: UploadFile = File(...),
     db: Session = Depends(
         get_db,
@@ -153,7 +137,7 @@ async def upload_departments_csv(
     try:
         contents = await file.read()
         df = pd.read_csv(io.StringIO(contents.decode("utf-8")), header=None)
-        df.columns = ["id", "department"]
+        df.columns = ["id", "job"]
 
         # Validate data
         if df.isnull().any().any():
@@ -163,22 +147,20 @@ async def upload_departments_csv(
         records_updated = 0
 
         for _, row in df.iterrows():
-            existing = (
-                db.query(DBDepartment).filter(DBDepartment.id == int(row["id"])).first()
-            )
+            existing = db.query(DBJob).filter(DBJob.id == int(row["id"])).first()
 
             if existing:
-                existing.department = row["department"]
+                existing.job = row["job"]
                 records_updated += 1
             else:
-                dept = DBDepartment(id=int(row["id"]), department=row["department"])
-                db.add(dept)
+                new_job = DBJob(id=int(row["id"]), job=row["job"])
+                db.add(new_job)
                 records_inserted += 1
 
         db.commit()
 
         return UploadResponse(
-            message="Departments uploaded successfully",
+            message="Jobs uploaded successfully",
             records_inserted=records_inserted,
             records_updated=records_updated,
         )
@@ -190,24 +172,22 @@ async def upload_departments_csv(
 
 
 @router.post("/upload/batch", response_model=BatchResponse)
-def batch_insert_departments(
-    departments: List[Department], db: Session = Depends(get_db)
-):
-    if len(departments) < 1 or len(departments) > 1000:
+def batch_insert_jobs(jobs: List[Job], db: Session = Depends(get_db)):
+    if len(jobs) < 1 or len(jobs) > 1000:
         raise HTTPException(
             status_code=400, detail="Batch size must be between 1 and 1000 records"
         )
 
     try:
         records_inserted = 0
-        bulk_dept = []
+        bulk_job = []
 
-        for dept_data in departments:
-            dept = DBDepartment(**dept_data.model_dump())
-            bulk_dept.append(dept)
+        for job_data in jobs:
+            job = DBJob(**job_data.model_dump())
+            bulk_job.append(job)
             records_inserted += 1
 
-        db.bulk_save_objects(bulk_dept)
+        db.bulk_save_objects(bulk_job)
         db.commit()
 
         return BatchResponse(

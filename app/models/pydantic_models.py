@@ -25,6 +25,29 @@ class DepartmentUpdate(DepartmentBase):
 
 
 # ###############################
+# Job Pydantic Models
+# ###############################
+
+
+class JobBase(BaseModel):
+    job: str = Field(..., min_length=1, max_length=150)
+
+
+class Job(JobBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class JobCreate(JobBase):
+    pass
+
+
+class JobUpdate(JobBase):
+    pass
+
+
+# ###############################
 # Employee Pydantic Models
 # ###############################
 
@@ -67,6 +90,12 @@ class EmployeeUpdate(BaseModel):
 
 
 class DepartmentWithEmployees(Department):
+    employees: list[EmployeeBasic] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class JobWithEmployees(Job):
     employees: list[EmployeeBasic] = []
 
     model_config = ConfigDict(from_attributes=True)

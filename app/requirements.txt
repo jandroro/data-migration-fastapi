@@ -1,0 +1,6 @@
+fastapi[standard]
+sqlalchemy
+databases[asyncpg]
+python-dotenv
+pydantic-settings
+boto3

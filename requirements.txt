@@ -1,6 +1,8 @@
 fastapi[standard]
-sqlalchemy
+uvicorn[standard]
 databases[asyncpg]
+sqlalchemy
 python-dotenv
 pydantic-settings
+psycopg2-binary
 boto3

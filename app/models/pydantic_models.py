@@ -1,0 +1,72 @@
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from typing import Optional
+
+# ###############################
+# Department Pydantic Models
+# ###############################
+
+
+class DepartmentBase(BaseModel):
+    department: str = Field(..., min_length=1, max_length=150)
+
+
+class Department(DepartmentBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DepartmentCreate(DepartmentBase):
+    pass
+
+
+class DepartmentUpdate(DepartmentBase):
+    pass
+
+
+# ###############################
+# Employee Pydantic Models
+# ###############################
+
+
+class EmployeeBase(BaseModel):
+    name: Optional[str] = None
+    datetime: Optional[str] = None
+    department_id: Optional[int] = None
+    job_id: Optional[int] = None
+
+
+class EmployeeBasic(EmployeeBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EmployeeCreate(EmployeeBase):
+    pass
+
+
+class Employee(EmployeeBase):
+    id: int
+    department: Optional[Department] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EmployeeUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    email: Optional[EmailStr] = None
+    department_id: Optional[int] = Field(None, gt=0)
+    position: Optional[str] = Field(None, min_length=1, max_length=100)
+    salary: Optional[float] = Field(None, gt=0)
+
+
+# ###############################
+# RESPONSE MODELS
+# ###############################
+
+
+class DepartmentWithEmployees(Department):
+    employees: list[EmployeeBasic] = []
+
+    model_config = ConfigDict(from_attributes=True)

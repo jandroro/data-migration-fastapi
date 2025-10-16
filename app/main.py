@@ -1,21 +1,17 @@
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.routers.department import department_router
-from app.database import database
+from app.routers import department
+from app.database import Base, engine
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await database.connect()
-    yield
-    await database.disconnect()
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
     title="Data Migration API",
     description="REST API for migrating historical employee data from CSV to SQL database",
-    lifespan=lifespan,
     version="1.0.0",
 )
 
-app.include_router(department_router, prefix="/api/v1")
+# Include routers
+app.include_router(department.router)

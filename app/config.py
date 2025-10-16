@@ -1,6 +1,7 @@
 import boto3
 import json
 from typing import Optional
+from pydantic import Field
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from botocore.exceptions import ClientError
@@ -9,7 +10,7 @@ from urllib.parse import quote_plus
 
 class BaseConfig(BaseSettings):
     # Application settings
-    ENV_STATE: Optional[str] = None
+    ENV_STATE: str = "dev"
 
     model_config = SettingsConfigDict(
         env_file=".env",
